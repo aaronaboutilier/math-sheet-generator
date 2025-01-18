@@ -46,7 +46,7 @@ const HomePage: NextPage = () => {
     minNumber: -50,
     maxNumber: 50,
     exclusionNumbers: [-2, -1, 0, 1, 2],
-    rowGap: 3, // (assumed rem)
+    rowGap: 4, // (assumed rem)
     columnGap: 6, // (assumed rem)
     minAbsoluteAnswer: 5,
   });
@@ -78,8 +78,8 @@ const HomePage: NextPage = () => {
    */
   useEffect(() => {
     // Compare "equationOptions minus showAnswers" to "lastGenOptions minus showAnswers"
-    const {  ...otherNew } = equationOptions;
-    const {  ...otherOld } = lastGenOptions;
+    const { showAnswers: _newShowAnswers, ...otherNew } = equationOptions;
+    const { showAnswers: _oldShowAnswers, ...otherOld } = lastGenOptions;
 
     const hasChanged = JSON.stringify(otherNew) !== JSON.stringify(otherOld);
 
