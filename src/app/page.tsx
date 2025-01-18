@@ -31,7 +31,7 @@ const SplitPane = dynamic(() => import("react-split-pane"), { ssr: false }) as R
 const HomePage: NextPage = () => {
   const [sidebarPosition, setSidebarPosition] = useState<SidebarPosition>("left");
 
-  // Default equation options (including new fields like row/column gaps, exclusionNumbers, etc.)
+  // Default equation options (including fields like row/column gaps, exclusionNumbers, etc.)
   const [equationOptions, setEquationOptions] = useState<EquationOptions>({
     rows: 6,
     columns: 5,
@@ -40,7 +40,7 @@ const HomePage: NextPage = () => {
     useMultiplication: false,
     useDivision: false,
     equationLayout: "stacked",
-    showAnswers: true,    // <-- Toggling this now won't regenerate automatically
+    showAnswers: true, // Toggling this won't regenerate automatically (see effect below)
     fontFamily: "Arial",
     fontSize: 17,
     minNumber: -50,
@@ -59,10 +59,23 @@ const HomePage: NextPage = () => {
 
   /**
    * We store the last set of options used to generate equations.
-   * We'll compare everything except the "showAnswers" field.
+   * We'll compare everything except the "showAnswers" field
+   * to decide if we must re-generate.
    */
   const [lastGenOptions, setLastGenOptions] = useState<EquationOptions>(equationOptions);
 
+  /**
+   * 1) On mount, generate an initial set of equations.
+   */
+  useEffect(() => {
+    handleRegenerate(); 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /**
+   * 2) Whenever equationOptions changes, compare them (minus showAnswers)
+   *    to lastGenOptions (minus showAnswers). If different, regenerate.
+   */
   useEffect(() => {
     // Compare "equationOptions minus showAnswers" to "lastGenOptions minus showAnswers"
     const {  ...otherNew } = equationOptions;
@@ -86,13 +99,14 @@ const HomePage: NextPage = () => {
   }, [equationOptions, lastGenOptions]);
 
   /**
-   * Manually regenerates the equations (e.g., when user clicks "Regenerate")
+   * Manually regenerates the equations (e.g., when user clicks "Regenerate").
+   * Also updates lastGenOptions to keep them in sync.
    */
   const handleRegenerate = () => {
     try {
       const generator = new EquationGenerator(equationOptions);
       setEquations(generator.generateEquations());
-      setLastGenOptions(equationOptions); // keep them in sync
+      setLastGenOptions(equationOptions);
     } catch (error) {
       console.error(error);
       setEquations([]);
@@ -127,11 +141,6 @@ const HomePage: NextPage = () => {
       position={sidebarPosition}
       onPositionChange={setSidebarPosition}
       options={equationOptions}
-      /**
-       * We still let all changes update `equationOptions`.
-       * Toggling `showAnswers` won't regenerate automatically
-       * because of our check in the effect above.
-       */
       onOptionsChange={setEquationOptions}
       onRegenerate={handleRegenerate}
     />
