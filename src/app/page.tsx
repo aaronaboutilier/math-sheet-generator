@@ -65,8 +65,8 @@ const HomePage: NextPage = () => {
 
   useEffect(() => {
     // Compare "equationOptions minus showAnswers" to "lastGenOptions minus showAnswers"
-    const { showAnswers, ...otherNew } = equationOptions;
-    const { showAnswers: oldAnswers, ...otherOld } = lastGenOptions;
+    const {  ...otherNew } = equationOptions;
+    const {  ...otherOld } = lastGenOptions;
 
     const hasChanged = JSON.stringify(otherNew) !== JSON.stringify(otherOld);
 
