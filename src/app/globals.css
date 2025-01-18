@@ -19,3 +19,22 @@ body {
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@media print {
+  /* Hide interactive UI */
+  .no-print {
+    display: none !important;
+  }
+
+  /* Show print-only content */
+  .print-only {
+    display: block !important;
+  }
+
+  /* Optionally adjust the print-only content styling */
+  .print-only .print-preview {
+    width: 100% !important;
+    height: auto !important;
+    position: static !important;
+  }
+}
