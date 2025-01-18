@@ -12,36 +12,38 @@ const FLEX_NOWRAP: "nowrap" = "nowrap" as const;
 const FLEX_WRAP: "wrap" = "wrap" as const;
 
 interface SidebarProps {
-  position: SidebarPosition; // Now only "left" or "top" are expected.
+  position: SidebarPosition; // "left" or "top"
   onPositionChange: (pos: SidebarPosition) => void;
+  /**
+   * Updated signature: the second argument ("skipRegenerate") is optional.
+   * If it's `true`, the parent can skip regenerating equations.
+   */
+  onOptionsChange: (newOptions: EquationOptions, skipRegenerate?: boolean) => void;
+  onRegenerate: () => void; // Callback to regenerate equations
   options: EquationOptions;
-  onOptionsChange: (newOptions: EquationOptions) => void;
-  onRegenerate: () => void; // Callback for regeneration of equations
 }
 
 const Sidebar: FC<SidebarProps> = ({
   position,
   onPositionChange,
-  options,
   onOptionsChange,
   onRegenerate,
+  options,
 }) => {
   const isTop = position === "top";
 
-  // Base container style for the sidebar.
+  // Base container styles
   const baseContainerStyle: React.CSSProperties = {
     width: "100%",
     backgroundColor: "#f0f0f0",
     padding: "1rem",
     boxSizing: "border-box",
     color: "#333",
-    gap: "1rem",
     display: "flex",
     flexDirection: FLEX_COLUMN,
-    overflowX: isTop ? "auto" : "visible",
   };
 
-  // Top bar (common for both positions)
+  // Top bar: we'll allow horizontal scrolling in "top" mode
   const topBar = (
     <div
       style={{
@@ -49,32 +51,59 @@ const Sidebar: FC<SidebarProps> = ({
         gap: "0.5rem",
         flexWrap: isTop ? FLEX_NOWRAP : FLEX_WRAP,
         marginBottom: "0.5rem",
+        overflowX: isTop ? "auto" : "visible",
+        // Keeps items in a single horizontal row for top mode, enabling scroll
+        whiteSpace: isTop ? "nowrap" : "normal",
       }}
     >
-      <button
-        onClick={() => window.print()}
-        style={{ padding: "0.5rem", border: "1px solid #333" }}
-      >
-        Print
-      </button>
-      <button
-        onClick={onRegenerate}
-        style={{ padding: "0.5rem", border: "1px solid #333" }}
-      >
-        Regenerate
-      </button>
-      <button
-        onClick={() => onPositionChange("left")}
-        style={{ padding: "0.5rem", border: "1px solid #333" }}
-      >
-        Left
-      </button>
-      <button
-        onClick={() => onPositionChange("top")}
-        style={{ padding: "0.5rem", border: "1px solid #333" }}
-      >
-        Top
-      </button>
+      <div>
+        <button
+          onClick={() => window.print()}
+          style={{
+            padding: "0.5rem",
+            margin: "0.5rem",
+            border: "1px solid #333",
+            cursor: "pointer",
+          }}
+        >
+          Print
+        </button>
+        <button
+          onClick={onRegenerate}
+          style={{
+            padding: "0.5rem",
+            margin: "0.5rem",
+            border: "1px solid #333",
+            cursor: "pointer",
+          }}
+        >
+          Regenerate
+        </button>
+      </div>
+      <div>
+        <button
+          onClick={() => onPositionChange("left")}
+          style={{
+            padding: "0.5rem",
+            margin: "0.5rem",
+            border: "1px solid #333",
+            cursor: "pointer",
+          }}
+        >
+          Left
+        </button>
+        <button
+          onClick={() => onPositionChange("top")}
+          style={{
+            padding: "0.5rem",
+            margin: "0.5rem",
+            border: "1px solid #333",
+            cursor: "pointer",
+          }}
+        >
+          Top
+        </button>
+      </div>
     </div>
   );
 
@@ -94,8 +123,13 @@ const Sidebar: FC<SidebarProps> = ({
     onOptionsChange({ ...options, equationLayout: layout });
   };
 
+  /**
+   * KEY CHANGE: We now pass a second argument "true" to indicate
+   * we want to skip regeneration. The parent can check that flag
+   * and avoid re-running the equation generator.
+   */
   const handleShowAnswersChange = (e: ChangeEvent<HTMLInputElement>) => {
-    onOptionsChange({ ...options, showAnswers: e.target.checked });
+    onOptionsChange({ ...options, showAnswers: e.target.checked }, true);
   };
 
   const handleFontFamilyChange = (e: ChangeEvent<HTMLSelectElement>) => {
@@ -133,21 +167,42 @@ const Sidebar: FC<SidebarProps> = ({
     // Split by comma, trim spaces, parse to numbers, and filter out NaNs
     const exclusionNumbers = input
       .split(",")
-      .map(num => parseInt(num.trim(), 10))
-      .filter(num => !isNaN(num));
+      .map((num) => parseInt(num.trim(), 10))
+      .filter((num) => !isNaN(num));
+
     onOptionsChange({ ...options, exclusionNumbers });
   };
 
   return (
     <div style={baseContainerStyle}>
-      <div>
-        {/* Print and Regenerate Buttons */}
-        {topBar}
-      </div>
+      {/* Top Bar (Print/Regenerate + Position Switch) */}
+      <div>{topBar}</div>
+
       {/* Options Container */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "1rem", flex: 1 }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: position === "top" ? "row" : "column",
+          gap: "1rem",
+          flex: 1,
+        }}
+      >
         {/* Equation Grid Options */}
         <div>
+          <label
+            style={{
+              display: "block",
+              marginBottom: "0.5rem",
+              marginTop: "0.5rem",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={options.showAnswers}
+              onChange={handleShowAnswersChange}
+            />
+            &nbsp;Show Answers
+          </label>
           <h4 style={{ margin: "0 0 0.5rem" }}>Equation Grid Options</h4>
           <label style={{ display: "block", marginBottom: "0.5rem" }}>
             Rows:
@@ -198,14 +253,6 @@ const Sidebar: FC<SidebarProps> = ({
             </label>
           </div>
           <label style={{ display: "block", marginBottom: "0.5rem" }}>
-            <input
-              type="checkbox"
-              checked={options.showAnswers}
-              onChange={handleShowAnswersChange}
-            />
-            &nbsp;Show Answers
-          </label>
-          <label style={{ display: "block", marginBottom: "0.5rem" }}>
             Font:
             <select
               value={options.fontFamily}
@@ -235,7 +282,7 @@ const Sidebar: FC<SidebarProps> = ({
         <div>
           <h4 style={{ margin: "0 0 0.5rem" }}>Number Range Options</h4>
           <label style={{ display: "block", marginBottom: "0.5rem" }}>
-            Min Number:
+            Min:
             <input
               type="number"
               value={options.minNumber}
@@ -244,7 +291,7 @@ const Sidebar: FC<SidebarProps> = ({
             />
           </label>
           <label style={{ display: "block", marginBottom: "0.5rem" }}>
-            Max Number:
+            Max:
             <input
               type="number"
               value={options.maxNumber}
@@ -256,9 +303,8 @@ const Sidebar: FC<SidebarProps> = ({
 
         {/* Exclusion Numbers */}
         <div>
-          <h4 style={{ margin: "0 0 0.5rem" }}>Exclusion Numbers</h4>
+          <h4 style={{ margin: "0 0 0.5rem" }}>Exclusion Numbers:</h4>
           <label style={{ display: "block", marginBottom: "0.5rem" }}>
-            Exclude:
             <input
               type="text"
               value={
@@ -268,7 +314,7 @@ const Sidebar: FC<SidebarProps> = ({
               }
               onChange={handleExclusionNumbersChange}
               placeholder="e.g., -2, -1, 0, 1, 2"
-              style={{ marginLeft: "0.5rem", width: "200px" }}
+              style={{ width: "200px" }}
             />
           </label>
         </div>
@@ -277,7 +323,7 @@ const Sidebar: FC<SidebarProps> = ({
         <div>
           <h4 style={{ margin: "0 0 0.5rem" }}>Gap Options</h4>
           <label style={{ display: "block", marginBottom: "0.5rem" }}>
-            Row Gap:
+            Row:
             <input
               type="number"
               value={options.rowGap}
@@ -286,7 +332,7 @@ const Sidebar: FC<SidebarProps> = ({
             />
           </label>
           <label style={{ display: "block", marginBottom: "0.5rem" }}>
-            Column Gap:
+            Column:
             <input
               type="number"
               value={options.columnGap}
@@ -346,5 +392,4 @@ const Sidebar: FC<SidebarProps> = ({
     </div>
   );
 };
-
 export default Sidebar;

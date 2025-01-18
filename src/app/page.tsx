@@ -14,7 +14,7 @@ import Preview from "../components/Preview";
 
 // Define a minimal SplitPaneProps interface
 interface SplitPaneProps {
-  split: 'vertical' | 'horizontal';
+  split: "vertical" | "horizontal";
   size: number;
   minSize: number;
   maxSize: number;
@@ -31,24 +31,24 @@ const SplitPane = dynamic(() => import("react-split-pane"), { ssr: false }) as R
 const HomePage: NextPage = () => {
   const [sidebarPosition, setSidebarPosition] = useState<SidebarPosition>("left");
 
-  // Default options (including new options such as row/column gaps and exclusionNumbers)
+  // Default equation options (including new fields like row/column gaps, exclusionNumbers, etc.)
   const [equationOptions, setEquationOptions] = useState<EquationOptions>({
-    rows: 5,
-    columns: 6,
+    rows: 6,
+    columns: 5,
     useAddition: true,
     useSubtraction: true,
     useMultiplication: false,
     useDivision: false,
     equationLayout: "stacked",
-    showAnswers: true,
+    showAnswers: true,    // <-- Toggling this now won't regenerate automatically
     fontFamily: "Arial",
-    fontSize: 16,
+    fontSize: 17,
     minNumber: -50,
     maxNumber: 50,
     exclusionNumbers: [-2, -1, 0, 1, 2],
-    rowGap: 6, // value assumed to be in rem
-    columnGap: 4, // value assumed to be in rem
-    minAbsoluteAnswer: 5
+    rowGap: 3, // (assumed rem)
+    columnGap: 6, // (assumed rem)
+    minAbsoluteAnswer: 5,
   });
 
   const [equations, setEquations] = useState<Equation[]>([]);
@@ -57,27 +57,49 @@ const HomePage: NextPage = () => {
   const defaultSize = isHorizontal ? 250 : 150;
   const [paneSize, setPaneSize] = useState<number>(defaultSize);
 
-  useEffect(() => {
-    // Regenerate equations when generation-affecting options change.
-    try {
-      const generator = new EquationGenerator(equationOptions);
-      setEquations(generator.generateEquations());
-    } catch (error) {
-      console.error(error);
-      setEquations([]);
-    }
-  }, [equationOptions]);
+  /**
+   * We store the last set of options used to generate equations.
+   * We'll compare everything except the "showAnswers" field.
+   */
+  const [lastGenOptions, setLastGenOptions] = useState<EquationOptions>(equationOptions);
 
+  useEffect(() => {
+    // Compare "equationOptions minus showAnswers" to "lastGenOptions minus showAnswers"
+    const { showAnswers, ...otherNew } = equationOptions;
+    const { showAnswers: oldAnswers, ...otherOld } = lastGenOptions;
+
+    const hasChanged = JSON.stringify(otherNew) !== JSON.stringify(otherOld);
+
+    if (hasChanged) {
+      // Something besides showAnswers changed, so regenerate
+      try {
+        const generator = new EquationGenerator(equationOptions);
+        setEquations(generator.generateEquations());
+      } catch (error) {
+        console.error(error);
+        setEquations([]);
+      }
+      // Update the "lastGenOptions"
+      setLastGenOptions(equationOptions);
+    }
+    // else: if the only difference is showAnswers, skip regenerating
+  }, [equationOptions, lastGenOptions]);
+
+  /**
+   * Manually regenerates the equations (e.g., when user clicks "Regenerate")
+   */
   const handleRegenerate = () => {
     try {
       const generator = new EquationGenerator(equationOptions);
       setEquations(generator.generateEquations());
+      setLastGenOptions(equationOptions); // keep them in sync
     } catch (error) {
       console.error(error);
       setEquations([]);
     }
   };
 
+  // The styles for the SplitPane resizer
   const resizerStyle: React.CSSProperties = isHorizontal
     ? {
         background: "#ddd",
@@ -105,6 +127,11 @@ const HomePage: NextPage = () => {
       position={sidebarPosition}
       onPositionChange={setSidebarPosition}
       options={equationOptions}
+      /**
+       * We still let all changes update `equationOptions`.
+       * Toggling `showAnswers` won't regenerate automatically
+       * because of our check in the effect above.
+       */
       onOptionsChange={setEquationOptions}
       onRegenerate={handleRegenerate}
     />
@@ -141,7 +168,7 @@ const HomePage: NextPage = () => {
         <SplitPane
           split={splitType}
           size={paneSize}
-          minSize={isHorizontal ? 150 : 100}
+          minSize={isHorizontal ? 250 : 250}
           maxSize={isHorizontal ? 600 : 400}
           onDragFinished={(newSize: number) => setPaneSize(newSize)}
           allowResize
